@@ -3,8 +3,7 @@
 
 
 From mathcomp Require Import all_ssreflect.
-
-Require Import Wf_nat.
+From Coq Require Import Wf_nat.
 
 Require Import basic.
 
@@ -12,84 +11,84 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(*******************************************************************************)
-(*   This library is heavily based upon mathcomp.ssreflect libraries such as:  *)
-(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.seq.html         *)
-(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.fintype.html     *)
-(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.tuple.html       *)
-(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.finfun.html      *)
-(*                                                                             *)
-(*                                                                             *)
-(*   Here are short descriptions of the functionality currently implemented.   *)
-(*                                                                             *)
-(*                                                                             *)
-(*                        *** STRING-BASED TYPES ***                           *)
-(*                                                                             *)
-(*   Let (r : nat) (j, k : [[r]]) (p, q, s : [[r*]]) (U : ptree r) (T : Type).     *)
-(*                                                                             *)
-(*                                 DATATYPES                                   *)
-(*              nat == the natural numbers                                     *)
+(*********************************************************************************)
+(*   This library is heavily based upon mathcomp.ssreflect libraries such as:    *)
+(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.seq.html           *)
+(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.fintype.html       *)
+(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.tuple.html         *)
+(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.finfun.html        *)
+(*                                                                               *)
+(*                                                                               *)
+(*   Here are short descriptions of the functionality currently implemented.     *)
+(*                                                                               *)
+(*                                                                               *)
+(*                        *** STRING-BASED TYPES ***                             *)
+(*                                                                               *)
+(*   Let (r : nat) (j, k : [[r]]) (p, q, s : [[r*]]) (U : ptree r) (T : Type).   *)
+(*                                                                               *)
+(*                                 DATATYPES                                     *)
+(*              nat == the natural numbers                                       *)
 (*              [[r]] == the natural numbers smaller than r (aka the ordinal r)  *)
-(*             [[r*]] == the type of finite strings over [[r]]                     *)
+(*             [[r*]] == the type of finite strings over [[r]]                   *)
 (*          ptree r == the type of lists of [[r*]]                               *)
 (*             [[::]] == the empty list (or string depending on its type)        *)
-(*           j :: p == a string corresponding to prepending j to p             *)
+(*           j :: p == a string corresponding to prepending j to p               *)
 (* [[:: j1; ...; jn]] == the string with the elements j1 to jn                   *)
-(*       r.-tuple T == the type of tuples with r elements of type T            *)
+(*       r.-tuple T == the type of tuples with r elements of type T              *)
 (*              T^r == the type of the finite functions with input [[r]] and     *)
-(*                     output T; isomorphic to r.-tuple T, but structurally    *)
-(*                     positive                                                *)
-(*                                                                             *)
-(*   The following coercions are available:                                    *)
+(*                     output T; isomorphic to r.-tuple T, but structurally      *)
+(*                     positive                                                  *)
+(*                                                                               *)
+(*   The following coercions are available:                                      *)
 (*   - From [[r]] to nat                                                         *)
-(*   - From r.-tuple T to seq T                                                *)
-(*                                                                             *)
-(*                                ORDINALS                                     *)
+(*   - From r.-tuple T to seq T                                                  *)
+(*                                                                               *)
+(*                                ORDINALS                                       *)
 (*        wdord k i == the ordinal of type [[r]] with the same value as i (which *)
-(*                     has type [[k]]), for k : [[r]]                              *)
+(*                     has type [[k]]), for k : [[r]]                            *)
 (*         maxo j k == the maximum of j and k (of type [[r]])                    *)
 (*         mino j k == the minumum of j and k (of type [[r]])                    *)
 (*             So j == the successor of j (of type [[r]])                        *)
 (*        subon j n == the difference between j and n (of type [[r]]),           *)
-(*                     where n : nat                                           *)
-(*                                                                             *)
-(*                              SUFFIX-CLOSED                                  *)
+(*                     where n : nat                                             *)
+(*                                                                               *)
+(*                              SUFFIX-CLOSED                                    *)
 (*         parent p == the string p without the first element, or [[::]] if p is *)
-(*                     empty                                                   *)
-(*  suffix_closed U == every sufix of an element of U is also an element of U  *)
-(*  well_numbered U == if (j :: p) is in U, then for every k <= j, the string  *)
-(*                     (k :: p) is also in U                                   *)
-(*                                                                             *)
-(*                                TREE-LIKE                                    *)
-(*      tree_like U == suffix-closed, well-numbered and without duplicates     *)
-(*    is_parent p q == p is the parent (i.e. the first suffix) of q            *)
-(*     is_child p q == q is the parent of p                                    *)
-(*  is_ancestor p q == p is a suffix of q                                      *)
-(*      ancestors p == every suffix of p                                       *)
-(* is_strict_ancestor p q == p is a suffix of q, but p is not q                *)
-(*     children U p == a list of all the children of p in U                    *)
-(*         height U == the maximum size of the elements of U                   *)
-(*  descendants U p == a list of all the children of p, and the children of the*)
-(*                     children, and so on, as long as they are in U           *)
-(*      is_leaf U p == there are no descendants of p in U                      *)
-(*         leaves U == a list of all the leaves of U                           *)
-(*      connected U == there is only one string in U without its parent in U   *)
-(* children_from_arity p n == the n.-tuple of predicted children of p (where   *)
+(*                     empty                                                     *)
+(*  suffix_closed U == every sufix of an element of U is also an element of U    *)
+(*  well_numbered U == if (j :: p) is in U, then for every k <= j, the string    *)
+(*                     (k :: p) is also in U                                     *)
+(*                                                                               *)
+(*                                TREE-LIKE                                      *)
+(*      tree_like U == suffix-closed, well-numbered and without duplicates       *)
+(*    is_parent p q == p is the parent (i.e. the first suffix) of q              *)
+(*     is_child p q == q is the parent of p                                      *)
+(*  is_ancestor p q == p is a suffix of q                                        *)
+(*      ancestors p == every suffix of p                                         *)
+(* is_strict_ancestor p q == p is a suffix of q, but p is not q                  *)
+(*     children U p == a list of all the children of p in U                      *)
+(*         height U == the maximum size of the elements of U                     *)
+(*  descendants U p == a list of all the children of p, and the children of the  *)
+(*                     children, and so on, as long as they are in U             *)
+(*      is_leaf U p == there are no descendants of p in U                        *)
+(*         leaves U == a list of all the leaves of U                             *)
+(*      connected U == there is only one string in U without its parent in U     *)
+(* children_from_arity p n == the n.-tuple of predicted children of p (where     *)
 (*                            n : [[r.+1]])                                      *)
-(*                                                                             *)
+(*                                                                               *)
 (*   Let now (r : nat) (p : [[r.+1*]]) (U : ptree r.+1).                         *)
-(*                                                                             *)
+(*                                                                               *)
 (*        arity U p == the arity of p in U (of type [[r.+2]]), as long as U is   *)
-(*                     tree-like                                               *)
-(*    arity_nat U p == the nat version of arity U p                            *)
-(*                                                                             *)
-(* There is a bottom-up induction available for tree-like terms, ptree_buind.  *)
-
+(*                     tree-like                                                 *)
+(*    arity_nat U p == the nat version of arity U p                              *)
+(*                                                                               *)
+(* There is a bottom-up induction available for tree-like terms, ptree_buind.    *)
+(*********************************************************************************)
 
 
 
 (*   Unlike in the paper specification, here [[r]] is the finite set of numbers  *)
-(* between 0 and r-1, or in other words, the natural numbers i such that i < r.*)
+(* between 0 and r-1, or in other words, the natural numbers i such that i < r.  *)
 Notation "[ r ]" := 'I_r (at level 0, format "[ r ]").
 
 (*   There is an implicit coercion nat_of_ord : [[r]] -> nat that allows         *)
@@ -106,13 +105,12 @@ Definition wdord (k : [r.+1]) : [k] -> [r] :=
 Lemma wdord_eq (k : [r.+1]) (i j : [k]) :
   (wdord i == wdord j) = (i == j).
 Proof.
-  by apply /eqP /eqP; move=> /val_eqP /= /eqP eq; apply /val_eqP; rewrite /= eq.
+  by apply/eqP/eqP=>[/val_eqP /= /eqP|->] //; apply: ord_inj.
 Qed.
 
 Lemma wdord_inj (k : [r.+1]) : injective [eta @wdord k].
 Proof.
-  move=> i j /val_eqP /eqP /= eqnij.
-  by apply /val_eqP => /=; rewrite eqnij.
+  by move=> i j /val_eqP /eqP /=; apply: ord_inj.
 Qed.
 
 Definition maxo (m n : [r]) : [r] :=
@@ -123,18 +121,14 @@ Proof. by rewrite /maxo /maxn; case: ifP. Qed.
 
 Lemma maxo_idPr (m n : [r]) : reflect (maxo m n = n) (m <= n).
 Proof.
-  rewrite /maxo; case: ifP.
-    by move=> /ltnW ->; apply: (iffP idP).
-  move=> /negP /negP; rewrite -leqNgt => nlem.
-  apply: (iffP idP) => [mlen | -> //]; apply /eqP.
-  move: nlem mlen; case: ltngtP => // eqnm _ _.
-  by rewrite -val_eqE /=; apply /eqP.
+  rewrite /maxo; case: ltnP=>[/ltnW -> | nlem]; first by constructor.
+  apply: (iffP idP) => [mlen | -> //]; apply/ord_inj/eqP.
+  by rewrite eqn_leq mlen.
 Qed.
 
 Lemma maxoC : commutative maxo.
 Proof.
-  move=> m n; rewrite /maxo; case: ifP; case: ifP; case: ltngtP => //.
-  by move=> eqnm _ _; apply /eqP; rewrite -val_eqE /=; apply /eqP.
+  by move=> m n; rewrite /maxo; case: ltngtP=>//; apply: ord_inj.
 Qed.
 
 Lemma maxo_idPl (m n : [r]) : reflect (maxo m n = m) (n <= m).
@@ -160,11 +154,17 @@ Definition So (k : [r]) : [r.+1] := @Ordinal r.+1 k.+1 (ltn_ord k).
 Lemma S_So (k : [r]) : k.+1 = So k.
 Proof. by []. Qed.
 
-Definition subon (j : [r]) (n : nat) : [r].
-Proof.
-  refine (@Ordinal r (j - n) _).
-  by move: j => [j jltr]; rewrite (leq_ltn_trans _ jltr) ?leq_subr.
-Defined.
+Definition subon (j : [r]) (n : nat) : [r] :=
+  @Ordinal r (j - n)
+    (match j return j - n < r with
+     | @Ordinal _ k kltr => leq_ltn_trans (leq_subr n k) kltr
+     end).
+
+Lemma subon0 (j : [r]) : subon j 0 = j.
+Proof. by apply: ord_inj; rewrite /= subn0. Qed.
+
+Lemma subonS (j : [r]) n : subon j n.+1 = subon (subon j n) 1.
+Proof. by apply: val_inj; rewrite /= subnS subn1. Qed.
 
 Lemma subn_subon (j : [r]) (n : nat) : j - n = subon j n.
 Proof. by []. Qed.
@@ -208,18 +208,17 @@ Lemma suffix_closedP (U : ptree r) :
     (suffix_closed U).
 Proof.
   rewrite /suffix_closed.
-  apply: (iffP idP).
-    move=> /allP scU p j.
+  apply: (iffP allP)=>/= [scU p j|H].
     rewrite -{2}(parent_cons p j).
     by apply: scU.
-  move=> H; apply /allP; case => [// | j p].
+  case => [// | j p].
   by rewrite parent_cons; apply: H.
 Qed.
 
 Lemma suffix_closed_correct (U : ptree r) (p : [r*]) (n : nat) :
   suffix_closed U -> p \in U -> drop n p \in U.
 Proof.
-  move=> /allP scU; move: p; elim: n => [p | n IH].
+  move/allP=>scU; elim: n p=> [p | n IH].
     by rewrite drop0.
   case => [// | j p jpinU].
   rewrite drop_cons; apply: IH.
@@ -235,10 +234,7 @@ Proof.
 Qed.
 
 Definition well_numbered_single (U : ptree r) (s : [r*]) : bool :=
-  match s with
-  | [::] => true
-  | j :: p => (subon j 1) :: p \in U
-  end.
+  if s is j :: p then (subon j 1) :: p \in U else true.
 
 Definition well_numbered (U : ptree r) : bool :=
   all (well_numbered_single U) U.
@@ -249,17 +245,14 @@ Lemma well_numberedP (U : ptree r) :
         j :: p \in U -> forall (k : [r]), k <= j -> k :: p \in U)
     (well_numbered U).
 Proof.
-  apply: (iffP idP).
-    move=> /allP /=; rewrite /well_numbered_single => wnU p j jpinU k kleqj.
+  apply: (iffP allP)=>/= [|H].
+    rewrite /well_numbered_single => wnU p j jpinU k kleqj.
     set i := j - k.
-    have -> : k = subon j i by apply: val_inj; rewrite /i /= subKn.
+    have -> : k = subon j i by apply: ord_inj; rewrite /i /= subKn.
     elim: i => [| n IH].
-      suff -> : subon j 0 = j => //.
-      by apply: val_inj; rewrite /= subn0.
-    have -> : subon j n.+1 = subon (subon j n) 1.
-      by apply: val_inj; rewrite /= subnS subn1.
-    by apply: wnU _ IH.
-  move=> H; apply /allP; case => // a l alinU.
+      by rewrite subon0.
+    by rewrite subonS; apply: wnU _ IH.
+  case => // a l alinU.
   by apply: (H _ a) => //; apply: leq_subr.
 Qed.
 
@@ -276,7 +269,7 @@ Proof. by apply: (iffP and3P). Qed.
 Lemma tree_like_nil (U : ptree r) :
   tree_like U -> U != [::] -> [::] \in U.
 Proof.
-  by move=> /tree_likeP [? _ _]; apply: suffix_closed_nil.
+  by case/tree_likeP=> ? _ _; apply: suffix_closed_nil.
 Qed.
 
 (*
@@ -296,16 +289,16 @@ Lemma is_parentP (p q : [r*]) :
 Proof.
   rewrite /is_parent /parent.
   apply: (iffP idP).
-    case: q => [/andP [] //| i q /= /andP []].
-    by rewrite drop0 => /eqP -> _; exists i.
-  by move=> [i ->] /=; rewrite drop0 eqxx.
+    rewrite andbC; case: q => [| i q] //=.
+    by rewrite drop0 => /eqP ->; exists i.
+  by case=> i -> /=; rewrite drop0 eqxx.
 Qed.
 
 Lemma is_parent_strict (p : [r*]) :
   ~ (is_parent p p).
 Proof.
-  move=> /is_parentP [i /eqP].
-  elim: p => [// | x p IH].
+  case/is_parentP=>i /eqP.
+  elim: p => // x p IH.
   by rewrite eqseq_cons => /andP [/eqP ->].
 Qed.
 
@@ -340,8 +333,7 @@ Qed.
 Lemma is_ancestor_ancestors (p q : [r*]) :
   is_ancestor p q -> p \in ancestors q.
 Proof.
-  rewrite /is_ancestor /ancestors => /eqP ancp.
-  rewrite ancp.
+  rewrite /is_ancestor /ancestors => /eqP ->.
   suff : (size q - size p) \in (iota 0 (size q).+1) by apply: map_f.
   by rewrite mem_iota add0n ltnS leq_subr.
 Qed.
@@ -352,12 +344,12 @@ Definition is_strict_ancestor (p q : [r*]) : bool :=
 
 Lemma is_strict_ancestorW (p q : [r*]) :
   is_strict_ancestor p q -> is_ancestor p q.
-Proof. by move=> /andP []. Qed.
+Proof. by case/andP. Qed.
 
 Lemma is_parent_is_strict_ancestor (p q : [r*]) :
   is_parent p q -> is_strict_ancestor p q.
 Proof.
-  by move=> /is_parentP [i ->]; rewrite /is_strict_ancestor subSnn /= drop0.
+  by case/is_parentP=> i ->; rewrite /is_strict_ancestor subSnn /= drop0.
 Qed.
 
 Lemma self_ancestor (s : [r*]) : s \in ancestors s.
@@ -372,11 +364,10 @@ Lemma is_ancestorP (U : ptree r) (p q : [r*]) :
     (exists s : [r*], q = s ++ p)
     (is_ancestor p q).
 Proof.
-  apply: (iffP idP).
-    move=> /eqP ->.
+  apply: (iffP eqP)=>[->|[s->]].
     exists (take (size q - size p) q).
     by rewrite cat_take_drop.
-  by move=> [s ->]; rewrite /is_ancestor size_cat addnmBm drop_size_cat.
+  by rewrite size_cat addnmBm drop_size_cat.
 Qed.
 
 Definition children (U : ptree r) (p : [r*]) : seq [r*] :=
@@ -396,9 +387,7 @@ Qed.
 
 Lemma children_mem (U : ptree r) (p c : [r*]) :
   c \in children U p -> c \in U.
-Proof.
-  by move=> /childrenP [].
-Qed.
+Proof. by case/childrenP. Qed.
 
 Definition height (U : ptree r) : nat :=
   \max_(p <- U) size p.
@@ -411,9 +400,7 @@ Definition descendants_subtree (U : ptree r) (p : [r*]) : ptree r :=
 
 Lemma descendants_uniq (U : ptree r) (p : [r*]) :
   uniq U -> uniq (descendants U p).
-Proof.
-  by move=> uniqU; rewrite filter_uniq.
-Qed.
+Proof. by apply: filter_uniq. Qed.
 
 Lemma descendantsP (U : ptree r) (p : [r*]) (d : [r*]) :
   reflect
@@ -422,22 +409,22 @@ Lemma descendantsP (U : ptree r) (p : [r*]) (d : [r*]) :
 Proof.
   rewrite /descendants mem_filter.
   apply: (iffP idP).
-    by move=> /andP [/(is_ancestorP U) [s seq] dinU]; exists s.
-  move=> [s [deqsp ->]].
+    by case/andP =>/(is_ancestorP U) [s seq] dinU; exists s.
+  case=> s [deqsp ->].
   by rewrite andbT; apply /(is_ancestorP U); exists s.
 Qed.
 
 Definition is_leaf (U : ptree r) (s : [r*]) :=
-  all (fun p => ~~ (is_parent s p)) U.
+  all (fun p => ~~ is_parent s p) U.
 
 Lemma height_is_leaf (U : ptree r) (p : [r*]) :
     size p = height U ->
   is_leaf U p.
 Proof.
   rewrite /height => size_max.
-  apply /allP => /= q qinU; apply /negP => parentpq.
-  have /andP [szneq0 /eqP eqpdrop] := is_parent_is_strict_ancestor parentpq.
-  move: szneq0; suff -> : size q - size p == 0 by [].
+  apply /allP => /= q qinU.
+  apply: contra; first by exact: is_parent_is_strict_ancestor.
+  rewrite negb_and negbK; apply/orP; left.
   by rewrite subn_eq0 size_max leq_bigmax_list.
 Qed.
 
@@ -445,15 +432,13 @@ Lemma children_is_leaf (U : ptree r) (l : [r*]) :
   is_leaf U l = (children U l == [::]).
 Proof.
   apply /idP /idP.
-    move=> /allP /= lleaf; rewrite /children -(filter_pred0 U); apply /eqP.
-    apply: eq_in_filter => /= p pinU; rewrite /is_parent.
-    apply /andP => [[/eqP parentpisl pneqnil]].
-    have := lleaf p pinU; apply /negP /negPn /andP.
-    by rewrite parentpisl pneqnil.
+    move/allP => /= lleaf; rewrite /children -(filter_pred0 U); apply /eqP.
+    apply: eq_in_filter => /= p pinU.
+    by apply/negbTE/lleaf.
   rewrite /children /is_leaf => childrennil; apply /all_filterP.
   rewrite -{2}(filter_predT U).
   apply: eq_in_filter => /= p pinU.
-  apply /negP => parentlp; move: childrennil; apply /negP.
+  apply: contraL childrennil=> parentlp.
   rewrite -has_filter; apply /hasP => /=.
   by exists p.
 Qed.
@@ -478,9 +463,9 @@ Lemma children_from_arityP  (p : [r*]) (k : [r.+1]) (c : [r*]) :
     (exists (i : [k]), c = wdord i :: p)
     (c \in children_from_arity p k).
 Proof.
-  apply: (iffP idP).
-    by move=> /tnthP [i]; rewrite tnth_map tnth_ord_tuple => ->; exists i.
-  by move=> [i ->]; apply /tnthP; exists i; rewrite tnth_map tnth_ord_tuple.
+  apply: (iffP (tnthP _ c)).
+    by case=>i; rewrite tnth_map tnth_ord_tuple => ->; exists i.
+  by case=> i ->; exists i; rewrite tnth_map tnth_ord_tuple.
 Qed.
 
 Lemma children_from_arity0 (p : [r*]) :
@@ -545,10 +530,10 @@ Lemma children_indexes_uniq (p : [r.+1*]) :
     tree_like U ->
   uniq (children_indexes p).
 Proof.
-  move=> /tree_likeP [_ _ uniqU].
+  case/tree_likeP=> _ _ uniqU.
   rewrite map_inj_in_uniq ?children_uniq //.
   move=> /= c d /childrenP [/is_parentP [i ->] _].
-  by move=> /childrenP [/is_parentP [j ->] _] /= ->.
+  by case/childrenP=>/is_parentP [j ->] _ /= ->.
 Qed.
 
 Lemma children_map (p : [r.+1*]) :
@@ -562,28 +547,25 @@ Lemma max_in_children (p : [r.+1*]) :
    ~ is_leaf U p ->
  (\big[@maxo r.+1/ord0]_(c <- children U p) head ord0 c) :: p \in children U p.
 Proof.
-  rewrite children_is_leaf => notnil.
+  rewrite children_is_leaf => /negP notnil.
   rewrite {2}children_map /children_indexes; apply: map_f.
-  move: notnil; elim: (children U p) => [// | c cs IH _].
+  elim: (children U p) notnil => [// | c cs IH _].
   rewrite big_cons map_cons.
-  move: IH; case: cs => [_ | c' cs IH].
-    rewrite big_nil /=.
-    case: (ltoP (head ord0 c) ord0).
-      by rewrite ltn0.
-    by move=> /maxo_idPl ->; rewrite in_cons eqxx.
+  case: cs IH => [_ | c' cs IH].
+    rewrite big_nil /= inE.
+    by apply/eqP/maxo_idPl.
   set max := \big[_/_]_(_ <- _) _.
-  case: (ltoP (head ord0 c) max).
-    move=> /ltnW /maxo_idPr ->.
-    by rewrite in_cons IH // orbT.
-  move=> /maxo_idPl ->.
-  by rewrite in_cons eqxx.
+  rewrite inE.
+  case: (ltoP (head ord0 c) max)=>[/ltnW/maxo_idPr->|/maxo_idPl->].
+    by rewrite IH // orbT.
+  by rewrite eqxx.
 Qed.
 
 Lemma children_from_arity_uniq (p : [r.+1*]) :
   uniq U -> uniq (children_from_arity p (arity U p)).
 Proof.
   rewrite map_inj_in_uniq ?enum_uniq //= => n m _ _ /eqP.
-  by rewrite eqseq_cons wdord_eq => /andP [/eqP -> _].
+  by rewrite eqseq_cons wdord_eq eqxx andbT => /eqP.
 Qed.
 
 Lemma children_arityP (p : [r.+1*]) :
@@ -591,24 +573,23 @@ Lemma children_arityP (p : [r.+1*]) :
     p \in U ->
   perm_eq (children U p) (children_from_arity p (arity U p)).
 Proof.
-  move=> /tree_likeP [scU /well_numberedP wnU uniqU] pinU.
+  case/tree_likeP=>scU /well_numberedP wnU uniqU pinU.
   apply: uniq_perm; rewrite ?children_uniq ?children_from_arity_uniq //.
-  move=> /= s.
-  apply /idP /idP.
+  move=> /= s; apply /idP /idP.
     case ischildren : (children U p) => [// | c cs]; rewrite -ischildren.
-    move=> /childrenP [/is_parentP [j ->] sinU].
+    case/childrenP=>/is_parentP [j ->] sinU.
     apply /children_from_arityP.
     case isarity : (arity U p) => [a alt].
-    move: a alt isarity; case => [lt0r2 isarity | n ltn1r2 isarity].
-      by exfalso; move: isarity; rewrite /arity ischildren.
+    case: a alt isarity => [lt0r2 | n ltn1r2] isarity.
+      by rewrite /arity ischildren in isarity.
     exists (inord j).
-    apply /eqP; rewrite eqseq_cons eqxx andbT; apply /eqP /val_eqP /eqP => /=.
+    apply /eqP; rewrite eqseq_cons eqxx andbT; apply/eqP/ord_inj => /=.
     rewrite inordK //.
     have -> : n.+1 = (Ordinal ltn1r2) by [].
     rewrite -isarity -arity_nat_arity /arity_nat ischildren -ischildren.
     rewrite -[j]/(head ord0 (j :: p)); apply: leq_bigmax_list.
     by apply /childrenP; rewrite is_parent_trivial sinU.
-  move=> /children_from_arityP [i ->].
+  case/children_from_arityP=>i ->.
   apply /childrenP; split.
     by apply /is_parentP; exists (wdord i).
   move: i; rewrite /arity.
@@ -667,9 +648,8 @@ Proof.
   apply: IH; last by apply: mem_child.
   rewrite /lth /=.
   rewrite subnS ltn_predL subn_gt0 /height.
-  rewrite ltn_neqAle; apply /andP; split; last by rewrite leq_bigmax_list.
-  apply /eqP => size_max; move: notleafp.
-  by rewrite height_is_leaf.
+  rewrite ltn_neqAle leq_bigmax_list // andbT.
+  by apply: contraNneq notleafp; exact: height_is_leaf.
 Qed.
 
 End Strings2.

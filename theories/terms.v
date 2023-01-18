@@ -3,134 +3,133 @@
 
 
 From mathcomp Require Import all_ssreflect finmap.
+From Coq Require Import Program.Wf.
 
-Require Import Coq.Program.Wf.
-
-Require Import basic.
-Require Import trees.
+Require Import basic trees.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(*******************************************************************************)
-(*   This library is heavily based upon mathcomp.ssreflect libraries such as:  *)
-(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.seq.html         *)
-(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.fintype.html     *)
-(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.tuple.html       *)
-(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.finfun.html      *)
-(*   and on the finmap library:                                                *)
-(*   - https://github.com/math-comp/finmap/blob/master/finmap.v                *)
-(*                                                                             *)
-(*                                                                             *)
-(*   Here are short descriptions of the functionality currently implemented.   *)
-(*                                                                             *)
-(*                                                                             *)
-(*                           *** TREE-BASED TYPES ***                          *)
-(*                                                                             *)
-(*   Let (T : Type) (r i n : nat) (Sigma : finType) (d : Sigma)                *)
-(* (t : tterm r Sigma) (state : finType) (q : state) (A : tbuta r Sigma state) *)
-(* (t' : tsterm).                                                              *)
-(*                                                                             *)
-(*                                    TERMS                                    *)
-(*          ttree r == structural trees with constructors                      *)
-(*                     - leaf                                                  *)
-(*                     - node k f                                              *)
+(*********************************************************************************)
+(*   This library is heavily based upon mathcomp.ssreflect libraries such as:    *)
+(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.seq.html           *)
+(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.fintype.html       *)
+(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.tuple.html         *)
+(*   - https://math-comp.github.io/htmldoc/mathcomp.ssreflect.finfun.html        *)
+(*   and on the finmap library:                                                  *)
+(*   - https://github.com/math-comp/finmap/blob/master/finmap.v                  *)
+(*                                                                               *)
+(*                                                                               *)
+(*   Here are short descriptions of the functionality currently implemented.     *)
+(*                                                                               *)
+(*                                                                               *)
+(*                           *** TREE-BASED TYPES ***                            *)
+(*                                                                               *)
+(*   Let (T : Type) (r i n : nat) (Sigma : finType) (d : Sigma)                  *)
+(* (t : tterm r Sigma) (state : finType) (q : state) (A : tbuta r Sigma state)   *)
+(* (t' : tsterm).                                                                *)
+(*                                                                               *)
+(*                                    TERMS                                      *)
+(*          ttree r == structural trees with constructors                        *)
+(*                     - leaf                                                    *)
+(*                     - node k f                                                *)
 (*                     where (k : [[r.+1]]) is the arity of the node (i.e., the  *)
-(*                     number of children) and (f : ttree^k) is a finite       *)
+(*                     number of children) and (f : ttree^k) is a finite         *)
 (*                     function assigning a child to each (j : [[k]])            *)
-(*       ttree_nind == a nested induction principle for ttree (the standard    *)
-(*                     one is as weak as a case analysis)                      *)
-(*    tterm r Sigma == structural terms with constructors                      *)
-(*                     - tleaf a                                               *)
-(*                     - tnode a k f                                           *)
+(*       ttree_nind == a nested induction principle for ttree (the standard      *)
+(*                     one is as weak as a case analysis)                        *)
+(*    tterm r Sigma == structural terms with constructors                        *)
+(*                     - tleaf a                                                 *)
+(*                     - tnode a k f                                             *)
 (*                     where (a : Sigma) is a label, (k : [[r.+1]]) is the arity *)
-(*                     of the node and (f : tterm^k) is as above               *)
-(*       tterm_nind == a nested induction principle for tterm (the standard    *)
-(*                     one is as weak as a case analysis)                      *)
-(*       head_sig t == the label of the root of t                              *)
-(*           tpos t == the ttree obtained from t by forgeting the labels       *)
-(*      positions t == the ptree corresponding to t                            *)
-(*    fsig_at d t p == the label found at position p of t, or d if p is not a  *)
-(*                     position of t                                           *)
-(*        child_ind == an induction principle for terms starting from the      *)
-(*                     leaves and using positions                              *)
-(*                                                                             *)
-(*                                  AUTOMATA                                   *)
-(*    tbuta r Sigma state == bottom-up tree automata with the following fields *)
-(*                     - (final : seq state) represents the final (i.e.,       *)
-(*                       accepting) states                                     *)
+(*                     of the node and (f : tterm^k) is as above                 *)
+(*       tterm_nind == a nested induction principle for tterm (the standard      *)
+(*                     one is as weak as a case analysis)                        *)
+(*       head_sig t == the label of the root of t                                *)
+(*           tpos t == the ttree obtained from t by forgeting the labels         *)
+(*      positions t == the ptree corresponding to t                              *)
+(*    fsig_at d t p == the label found at position p of t, or d if p is not a    *)
+(*                     position of t                                             *)
+(*        child_ind == an induction principle for terms starting from the        *)
+(*                     leaves and using positions                                *)
+(*                                                                               *)
+(*                                  AUTOMATA                                     *)
+(*    tbuta r Sigma state == bottom-up tree automata with the following fields   *)
+(*                     - (final : seq state) represents the final (i.e.,         *)
+(*                       accepting) states                                       *)
 (*                     - (transitions : {ffun forall k : [[r.+1]],               *)
-(*                         seq (k.-tuple state * Sigma * state)})              *)
-(*                       represents the transition function. Thus,             *)
-(*                       (transitions k) is the list of the transitions with   *)
-(*                       arity k                                               *)
-(*     tbuta_uniq A == true iff there are no repeated transitions in A         *)
-(*     buta r Sigma state == a uniq tbuta with constructor BUTA                *)
-(*      buta_size A == the size of the automaton A, equal to the sum of the    *)
-(*                     number of states with the number of unique transitions  *)
-(* reach_at_depth A q t i == in the automaton A, term t reaches state q in at  *)
-(*                     most i steps                                            *)
-(* reach_eventually A q t == in A, t eventually reaches q                      *)
-(*      accepts A t == t eventually reaches one of the final states of A       *)
-(*  transitions_preim A q == the transitions of A that have q as a consequent  *)
-(*    in_degree_state A q == the number of transitions of A that have q as a   *)
-(*                     consequent                                              *)
-(*      in_degree A == the maximum in-degree of any given state of A           *)
-(*  deterministic A == for each tuple of states qs and label a, there is at    *)
-(*                     most one state q such that (qs, a, q) is a transition   *)
-(*                     of A                                                    *)
-(* restrict r Sigma state A n (nler : n <= r) == the (tbuta n Sigma state)     *)
-(*                     automaton corresponding to A without the transitions    *)
-(*                     with greater than n arity                               *)
-(*                                                                             *)
-(*                                     RUNS                                    *)
-(*   Let (dSigma : Sigma) (dstate : state) (A : tbuta r.+1 Sigma state)        *)
+(*                         seq (k.-tuple state * Sigma * state)})                *)
+(*                       represents the transition function. Thus,               *)
+(*                       (transitions k) is the list of the transitions with     *)
+(*                       arity k                                                 *)
+(*     tbuta_uniq A == true iff there are no repeated transitions in A           *)
+(*     buta r Sigma state == a uniq tbuta with constructor BUTA                  *)
+(*      buta_size A == the size of the automaton A, equal to the sum of the      *)
+(*                     number of states with the number of unique transitions    *)
+(* reach_at_depth A q t i == in the automaton A, term t reaches state q in at    *)
+(*                     most i steps                                              *)
+(* reach_eventually A q t == in A, t eventually reaches q                        *)
+(*      accepts A t == t eventually reaches one of the final states of A         *)
+(*  transitions_preim A q == the transitions of A that have q as a consequent    *)
+(*    in_degree_state A q == the number of transitions of A that have q as a     *)
+(*                     consequent                                                *)
+(*      in_degree A == the maximum in-degree of any given state of A             *)
+(*  deterministic A == for each tuple of states qs and label a, there is at      *)
+(*                     most one state q such that (qs, a, q) is a transition     *)
+(*                     of A                                                      *)
+(* restrict r Sigma state A n (nler : n <= r) == the (tbuta n Sigma state)       *)
+(*                     automaton corresponding to A without the transitions      *)
+(*                     with greater than n arity                                 *)
+(*                                                                               *)
+(*                                     RUNS                                      *)
+(*   Let (dSigma : Sigma) (dstate : state) (A : tbuta r.+1 Sigma state)          *)
 (* (t t' : tterm r.+1 Sigma) (rho : [[r.+1*]] -> state)                          *)
-(* (rn : frun dSigma dstate A t) (rn' : frun dSigma dstate A t').              *)
-(*                                                                             *)
-(* wfrun dSigma A t rho == for each position p of t, if cs are the children of *)
-(*                     p, then (map rho cs, fsig_at dSigma t p, rho p) is a    *)
-(*                     transition of A                                         *)
-(* frun dSigma dstate A t == the type of well-formed runs, where an frun can   *)
-(*                     be built with the constructor @FRun frho W, where:      *)
+(* (rn : frun dSigma dstate A t) (rn' : frun dSigma dstate A t').                *)
+(*                                                                               *)
+(* wfrun dSigma A t rho == for each position p of t, if cs are the children of   *)
+(*                     p, then (map rho cs, fsig_at dSigma t p, rho p) is a      *)
+(*                     transition of A                                           *)
+(* frun dSigma dstate A t == the type of well-formed runs, where an frun can     *)
+(*                     be built with the constructor @FRun frho W, where:        *)
 (*                     - frho : {fsfun [[r.+1*]] -> state with dstate}           *)
-(*                     - W : wfrun dSigma A t frho                             *)
-(*     frun_size rn == the number of positions of the term of the run          *)
-(*      reaches_state rn q == the state reached at the root is q               *)
-(*  is_accepting rn == the run rn reaches some accepting state                 *)
-(* reaches_transition rn k tr == the run rn reaches the k-transition k         *)
-(*           fpos t == the finite set corresponding to the positions of t      *)
-(* unambiguous dSigma A == for each term t there is at most one rho such that  *)
-(*                     (wfrun dSigma A t rho) holds                            *)
-(* extends A t t' rn rn' == there is a string p that can be appended to each   *)
-(*                     position of t to obtain the behaviour of rn'            *)
-(*                                                                             *)
-(*                            INTERSECTION & UNION                             *)
-(*   Let (r n r1 r2 : nat) (Sig st1 st2 : finType)                             *)
-(* (trsik : seq (k.-tuple sti * Sig * sti))                                    *)
+(*                     - W : wfrun dSigma A t frho                               *)
+(*     frun_size rn == the number of positions of the term of the run            *)
+(*      reaches_state rn q == the state reached at the root is q                 *)
+(*  is_accepting rn == the run rn reaches some accepting state                   *)
+(* reaches_transition rn k tr == the run rn reaches the k-transition k           *)
+(*           fpos t == the finite set corresponding to the positions of t        *)
+(* unambiguous dSigma A == for each term t there is at most one rho such that    *)
+(*                     (wfrun dSigma A t rho) holds                              *)
+(* extends A t t' rn rn' == there is a string p that can be appended to each     *)
+(*                     position of t to obtain the behaviour of rn'              *)
+(*                                                                               *)
+(*                            INTERSECTION & UNION                               *)
+(*   Let (r n r1 r2 : nat) (Sig st1 st2 : finType)                               *)
+(* (trsik : seq (k.-tuple sti * Sig * sti))                                      *)
 (* (trsi : {ffun forall k : [[r.+2]], seq (k.-tuple sti * Sig * sti)})           *)
-(* (Ai : tbuta r.+1 Sigma sti) (Ai' : tbuta ri.+1 Sigma sti), with i = 1, 2.   *)
-(*                                                                             *)
-(* restrict A1 n (nler : n.+1 <= r.+1) == A1 restricted to the transitions of  *)
-(*                     arity <= n.+1                                           *)
-(* mergeable k trs1k trs2k == the list of pairs (tr1, tr2) such that           *)
-(*                     tr1 \in trs1k, tr2 \in trs2k, and the labels of tr1 and *)
-(*                     tr2 coincide                                            *)
-(*  merge trs1 trs2 == the result of merging the transition functions tr1 and  *)
-(*                     tr2                                                     *)
-(* intersection1 A1 A2 == the automaton whose final states are all the pairs   *)
-(*                     of final states from A1 and A2, and whose transition    *)
-(*                     function is the merge of the transition functions of A1 *)
-(*                     and A2                                                  *)
-(*     union1 A1 A2 == the automaton whose final states are all the pairs in   *)
-(*                     which one of the elements is a final state from A1 or   *)
-(*                     A2, and whose transition function is the merge of the   *)
-(*                     transition functions of A1 and A2                       *)
-(* intersection A1' A2' == the intersection1 of the restrictions of A1' and    *)
-(*                     A2' to the minumum between r1 and r2                    *)
-(*    union A1' A2' == the union1 of the restrictions of A1' and A2' to the    *)
-(*                     minumum between r1 and r2                               *)
+(* (Ai : tbuta r.+1 Sigma sti) (Ai' : tbuta ri.+1 Sigma sti), with i = 1, 2.     *)
+(*                                                                               *)
+(* restrict A1 n (nler : n.+1 <= r.+1) == A1 restricted to the transitions of    *)
+(*                     arity <= n.+1                                             *)
+(* mergeable k trs1k trs2k == the list of pairs (tr1, tr2) such that             *)
+(*                     tr1 \in trs1k, tr2 \in trs2k, and the labels of tr1 and   *)
+(*                     tr2 coincide                                              *)
+(*  merge trs1 trs2 == the result of merging the transition functions tr1 and    *)
+(*                     tr2                                                       *)
+(* intersection1 A1 A2 == the automaton whose final states are all the pairs     *)
+(*                     of final states from A1 and A2, and whose transition      *)
+(*                     function is the merge of the transition functions of A1   *)
+(*                     and A2                                                    *)
+(*     union1 A1 A2 == the automaton whose final states are all the pairs in     *)
+(*                     which one of the elements is a final state from A1 or     *)
+(*                     A2, and whose transition function is the merge of the     *)
+(*                     transition functions of A1 and A2                         *)
+(* intersection A1' A2' == the intersection1 of the restrictions of A1' and      *)
+(*                     A2' to the minumum between r1 and r2                      *)
+(*    union A1' A2' == the union1 of the restrictions of A1' and A2' to the      *)
+(*                     minumum between r1 and r2                                 *)
+(*********************************************************************************)
 
 
 Section Tterms.
@@ -271,19 +270,19 @@ Lemma positions_tnode (a : Sigma) (k : [r.+1]) (f : tterm^k) (p : [r*]) :
   p = [::] \/
     exists (j : [k]) (q : [r*]), p = rcons q (wdord j) /\ q \in positions (f j).
 Proof.
-  rewrite /= in_cons => /orP [/eqP -> |]; first by left.
-  move=> /allpairsPdep /= [j [q [_ qinposfj eqpjq]]].
-  by right; exists j; exists q; split.
+  rewrite /= inE => /orP [/eqP -> |]; first by left.
+  case/allpairsPdep=> /= j [q [_ qinposfj eqpjq]].
+  by right; exists j, q.
 Qed.
 
 Lemma positions_child (a : Sigma) (k : [r.+1]) (f : tterm^k) (p : [r*])
     (j : [k]) :
   (p \in positions (f j)) = (rcons p (wdord j) \in positions (tnode a f)).
 Proof.
-  rewrite /= in_cons rcons_nil /=; apply /idP /idP => [pinposfj |].
-   by apply: allpairs_f_dep => //; apply mem_ord_enum.
-  move=> /allpairsPdep /= [i [q [_ qinposfi /eqP]]].
-  rewrite eqseq_rcons => /andP [/eqP -> wdij]; move: wdij.
+  rewrite /= inE rcons_nil /=; apply /idP /idP => [pinposfj |].
+    by apply: allpairs_f_dep => //; apply mem_ord_enum.
+  case/allpairsPdep => /= i [q [_ qinposfi /eqP]].
+  rewrite eqseq_rcons => /andP [/eqP ->].
   by rewrite wdord_eq => /eqP ->.
 Qed.
 
@@ -291,7 +290,7 @@ Lemma positions_last (a : Sigma) (k : [r.+1]) (f : tterm^k) (j : [r]) (p : [r*])
     j :: p \in positions (tnode a f) ->
   last j p < k.
 Proof.
-  rewrite /= in_cons /= => /allpairsPdep /= [i [q [_ qinpos /eqP]]].
+  rewrite /= inE /= => /allpairsPdep /= [i [q [_ qinpos /eqP]]].
   by rewrite lastI eqseq_rcons => /andP [_ /eqP ->] /=; apply: ltn_ord.
 Qed.
 
@@ -302,8 +301,8 @@ Proof.
   elim/tterm_nind: t => [a | a k f IH /=].
     by case.
   case/lastP=> //= p j.
-  rewrite headI => inpos; move: inpos (positions_last inpos).
-  rewrite belast_headI last_headI -headI => inpos ltjk.
+  rewrite headI => /[dup] /positions_last.
+  rewrite belast_headI last_headI -headI => ltjk inpos.
   rewrite insubT /= IH // (positions_child a).
   by have -> : wdord (Ordinal ltjk) = j by apply /val_eqP.
   Transparent positions.
@@ -317,7 +316,7 @@ Proof.
     case/lastP => [| p j i ipjinpos].
       by rewrite positions_nil.
     have ltjk : j < k.
-      by move: ipjinpos => /positions_last; rewrite last_rcons.
+      by move/positions_last: ipjinpos; rewrite last_rcons.
     move: ipjinpos.
     have -> : j = wdord (Ordinal ltjk) by apply /val_eqP.
     rewrite -rcons_cons -2!positions_child.
@@ -325,23 +324,23 @@ Proof.
   - apply /well_numberedP.
     elim/tterm_nind: t => [// | a k f IH].
     case/lastP => [j | q i j jqiinpos l lelj].
-       move=> /positions_tnode [// | [i [q [/eqP]]]].
+      move /positions_tnode => [// | [i [q [/eqP]]]].
       rewrite lastI eqseq_rcons => /= /andP [/eqP <- /eqP ->] _ l leli.
-      rewrite in_cons /=; apply /allpairsPdep => /=.
+      rewrite inE /=; apply /allpairsPdep => /=.
       have ltlk : l < k.
-        by rewrite (leq_ltn_trans leli) //; apply: (ltn_ord i).
-      exists (Ordinal ltlk); exists [::]; rewrite mem_ord_enum; split => //=.
+        by apply/(leq_ltn_trans leli)/(ltn_ord i).
+      exists (Ordinal ltlk), [::]; rewrite mem_ord_enum; split => //=.
         by apply: positions_nil.
       by congr cons; apply /val_eqP.
     have ltik : i < k.
-      by move: jqiinpos; move=> /positions_last; rewrite last_rcons.
+      by move/positions_last: jqiinpos; rewrite last_rcons.
     move: jqiinpos.
     have -> : i = wdord (Ordinal ltik) by apply /val_eqP.
     rewrite -2!rcons_cons -2!positions_child => jqinposi.
     by apply: (IH _ _ j).
   - elim/tterm_nind: t => [// | a k ts IH /=].
     apply /andP; split.
-      by apply /allpairsPdep => /= [[j [p [_ _]]]]; case p.
+      by apply /allpairsPdep => /= [[j [p [_ _]]]]; case: p.
     apply: allpairs_uniq_dep; first exact: ord_enum_uniq.
       by move=> j _; apply: IH.
     by move=> [j1 p1] [j2 p2] _ _ /rcons_inj [p1e1p2 /ord_inj j1eqj2]; f_equal.
@@ -396,17 +395,17 @@ Proof.
   - by rewrite map_inj_uniq ?enum_uniq //; apply: wdord_inj.
   Opaque positions.
   move=> i; apply /idP /idP.
-    move=> /mapP /= [c /childrenP [/is_parentP [j ->] jpinpos] ->] /=.
+    case/mapP=> /= c /childrenP [/is_parentP [j ->] jpinpos] -> /=.
     apply /mapP => /=.
     exists (Ordinal (positions_last jpinpos)).
       by rewrite mem_enum inE.
     by apply /val_eqP => /=.
-  move=> /mapP /= [j _ ->].
+  case/mapP => /= j _ ->.
   apply /mapP => /=; exists [:: wdord j] => //.
   Transparent positions.
   apply /childrenP; rewrite /is_parent /=; split => //=.
-  rewrite in_cons /=; apply /allpairsPdep => /=.
-  exists j; exists [::] => /=.
+  rewrite inE /=; apply /allpairsPdep => /=.
+  exists j, [::] => /=.
   by rewrite mem_ord_enum positions_nil.
 Qed.
 
@@ -417,10 +416,7 @@ Proof.
   rewrite -(big_map val [pred x | true] id) val_enum_ord /=.
   Transparent iota.
   have iota_perm : forall n, perm_eq (iota 0 n.+1) (n :: (iota 0 n)).
-    move=> m; apply: uniq_perm; first by rewrite iota_uniq.
-      by rewrite cons_uniq iota_uniq andbT mem_iota add0n /= -leqNgt.
-    move=> i; rewrite mem_iota in_cons mem_iota 2!add0n leq0n /=.
-    by rewrite ltnS leq_eqVlt.
+    by move=> m; rewrite -addn1 iotaD /= add0n cats1 perm_rcons.
   elim: n => [| n IH]; first by rewrite big_cons big_nil.
   rewrite (perm_big _ (iota_perm _)) /= big_cons IH.
   by apply /maxn_idPl.
@@ -429,21 +425,20 @@ Qed.
 Lemma arity_positions (a : Sigma) (k : [r.+2]) (f : (tterm r.+1 Sigma)^k) :
   arity (positions (tnode a f)) [::] = k.
 Proof.
-  move: f; case: k; case=> [lt0r2 f | n ltn1r2 f].
+  case: k f; case=> [lt0r2 | n ltn1r2] f.
     by rewrite /arity /=; apply /val_eqP.
   have ltnr1 : n < r.+1 by [].
   rewrite /arity children_map.
   Opaque positions.
-  case eqchildren : (children_indexes _ _) => [/= | i cs /=].
-    move: eqchildren => /perm_nilP.
-    move: (children_indexesE a f).
-    rewrite perm_sym => H1 H2.
-    have := perm_trans H1 H2.
-    rewrite /= => /perm_nilP /(f_equal size) /=.
+  case eqchildren : (children_indexes _ _) => /= [| i cs].
+    move/perm_nilP: eqchildren=>H2.
+    move: (children_indexesE a f); rewrite perm_sym => H1.
+    have /= := perm_trans H1 H2.
+    move/perm_nilP/(f_equal size)=>/=.
     by rewrite size_map size_enum_ord.
   have -> : Ordinal ltn1r2 = So (Ordinal ltnr1) by apply /val_eqP.
   congr So.
-  apply /val_eqP /eqP; rewrite /= /max -bmaxn_bmaxo -map_cons -eqchildren.
+  apply /ord_inj; rewrite /max -bmaxn_bmaxo -map_cons -eqchildren.
   rewrite (perm_big _ (perm_map _ (children_indexesE _ _))) /=.
   do 2!rewrite bigmax_map -map_comp -bigmax_map /=.
   by rewrite bigmax_enum.
@@ -475,10 +470,10 @@ Proof.
     rewrite bigmax_map [in RHS]bigmax_map.
     by apply: eq_big_idem => //; apply: maxnn.
   move=> c; apply /mapP /mapP.
-    move=> [q /childrenP [/is_parentP [i ->] qinpos] ->].
+    case=> q /childrenP [/is_parentP [i ->] qinpos] ->.
     exists (i :: p) => //.
     by apply /childrenP; rewrite is_parent_trivial (positions_child a).
-  move=> [q /childrenP [/is_parentP [i ->] qinpos] ->].
+  case=> q /childrenP [/is_parentP [i ->] qinpos] ->.
   exists (i :: rcons p (wdord j)) => //.
   by apply /childrenP; rewrite is_parent_trivial -rcons_cons -positions_child.
 Qed.
@@ -516,7 +511,7 @@ Proof. by case: A. Qed.
 
 Lemma buta_uniq_trans (A : buta) (k : [r.+1]) :
   uniq (transitions A k).
-Proof. by have /tbuta_uniqP /(_ k) := buta_uniq A. Qed.
+Proof. by move/tbuta_uniqP /(_ k): (buta_uniq A). Qed.
 
 Lemma buta_undup (A : buta) (k : [r.+1]) :
   undup (transitions A k) = transitions A k.
@@ -540,7 +535,7 @@ Fixpoint reach_at_depth (A : tbuta) (q : state) (t : tterm r Sigma) (i : nat) :
   end.
 
 Lemma reach_at_depth0 (A : tbuta) (q : state) (t : tterm r Sigma) :
-  reach_at_depth A q t 0 = false.
+  ~~ reach_at_depth A q t 0.
 Proof. by case: t. Qed.
 
 Lemma reach_at_depth_leq (A : tbuta) (q : state) (t : tterm r Sigma)
@@ -549,22 +544,21 @@ Lemma reach_at_depth_leq (A : tbuta) (q : state) (t : tterm r Sigma)
     reach_at_depth A q t i ->
   reach_at_depth A q t j.
 Proof.
-  move: i; elim: j => [i | j IH i].
+  elim: j => [| j IH] in i *.
     by rewrite leqn0 => /eqP ->.
-  case: ltngtP => [||->] //.
-  move=> leij _ reachi.
-  have := IH _ leij reachi => {i IH leij reachi}.
-  case: j; move: q; elim/tterm_nind: t => //=.
-  move=> a k f IH q n /'exists_and4P /= [[[qs a'] q'] /= [qsaq'_tran a'a q'q]].
-  case: n.
-    move: f IH qs qsaq'_tran; case: k => []; case.
+  case: ltngtP => [||->] //; rewrite ltnS=> leij _ reachi.
+  move: (IH _ leij reachi) => {i IH leij reachi}.
+  case: j q; elim/tterm_nind: t => //=.
+  move=> a k f IH n q /'exists_and4P /= [[[qs a'] q'] /= [qsaq'_tran a'a q'q]].
+  case: n=>[|n].
+    case: k f IH qs qsaq'_tran; case=>[|k].
       move=> lt0r1 f _ qs qsaq'_tran _.
       apply /'exists_and4P => /=; exists (qs, a', q'); split=> //.
       by apply /forallP => /= [[]].
-    move=> k ltk1r1 f _ qs _.
-    move=> reach0; exfalso; move: reach0; apply /negP; rewrite negb_forall.
-    by apply /existsP => /=; exists ord0; rewrite reach_at_depth0.
-  move=> n /forallP /= reachn1.
+    move=> ltk1r1 f _ qs _.
+    apply: contraLR=>_; rewrite negb_forall.
+    by apply /existsP => /=; exists ord0; exact: reach_at_depth0.
+  move/forallP=> /= reachn1.
   apply /'exists_and4P => /=; exists (qs, a', q'); split=> //.
   by apply /forallP => /= j; apply: IH.
 Qed.
@@ -596,8 +590,7 @@ Lemma reach_eventuallyP (A : tbuta) (q : state) (t : tterm r Sigma) :
     )
     (reach_eventually A q t).
 Proof.
-  case: t => /=  [a | a k f].
-    by apply: (iffP idP).
+  case: t => /=  [a | a k f]; first by apply: idP.
   apply: (iffP 'exists_and4P) => /=.
     by move=> [tr [? /eqP ? /eqP ? /forallP ?]]; exists tr; split.
   by move=> [tr [? /eqP ? /eqP ? /forallP ?]]; exists tr; split.
@@ -607,9 +600,9 @@ Lemma reach_at_depth_eventually (A : tbuta) (q : state) (t : tterm r Sigma) :
   reflect (exists i : nat, reach_at_depth A q t i) (reach_eventually A q t).
 Proof.
   apply: (iffP idP) => [|[i]].
-    move: t q; elim/tterm_nind => [a | a k f IH q].
+    elim/tterm_nind: t => [a | a k f IH] in q *.
       by exists 1.
-    move=> /'exists_and4P /= [[[qs a'] q'] /= [qsaq'_tran a'a q'q]].
+    move/'exists_and4P => /= [[[qs a'] q'] /= [qsaq'_tran a'a q'q]].
     rewrite -/reach_eventually => /forallP /= revent.
     have rdepth := IH _ _ (revent _) => {IH revent}.
     set m := \max_(j < k) (xchoose (rdepth j)); exists m.+1.
@@ -617,9 +610,9 @@ Proof.
     exists (qs, a', q'); split=> //.
     apply /forallP => /= j.
     by apply: (reach_at_depth_leq _ (xchooseP (rdepth j))); apply: leq_bigmax.
-  move: t q; elim i => [// | n IH]; case => //.
-  move=> a k f q /'exists_and4P /= [[[qs a'] q'] /= [qsaq'_tran a'a q'q]].
-  move=> /forallP /=; rewrite -/reach_at_depth => H.
+  elim: i t q => [| n IH]; case => // a k f q.
+  move/'exists_and4P => /= [[[qs a'] q'] /= [qsaq'_tran a'a q'q]].
+  move/forallP=>/=; rewrite -/reach_at_depth => H.
   apply /'exists_and4P => /=.
   exists (qs, a', q'); split => //=.
   by apply /forallP => /= j; apply: IH; apply: H.
@@ -661,7 +654,7 @@ Proof.
   apply: (iffP 'forall_'forall_forallP) => /=.
     move=> H k qs a q1 q2.
     set tr1 := (qs, a, q1); set tr2 := (qs, a, q2); move=> tr1trasn tr2trans.
-    have := H k qs a.
+    move: (H k qs a).
     set f := fun tr => _ => countlt1.
     have f1 : f tr1 by rewrite /f.
     have f2 : f tr2 by rewrite /f.
@@ -820,8 +813,8 @@ Lemma reaches_state_eventually (t : tterm r.+1 Sigma) (q : state) :
     (reach_eventually A q t).
 Proof.
   apply: (iffP idP).
-    move: q; elim/tterm_nind: t.
-      move=> a q /reach_eventuallyP aqintrans.
+    elim/tterm_nind: t=>[a|a k f IH] in q *.
+      move/reach_eventuallyP=>aqintrans.
       rewrite /reaches_state.
       pose rho := [fsfun p : fpos (tleaf r.+1 a) => q | dstate].
       have rho0 : rho [::] = q by rewrite fsfun_fun fpos_nil.
@@ -829,7 +822,7 @@ Proof.
         by exists (FRun wfrho); rewrite rho0.
       apply /wfrunP => /= p.
       by rewrite arity0 tuple0 mem_seq1 => /eqP ->; rewrite rho0.
-    move=> a k f IH q /reach_eventuallyP /= [tr [trintrans tra trq trqs]].
+    case/reach_eventuallyP => /= tr [trintrans tra trq trqs].
     pose rho := [fsfun p in fpos (tnode a f) =>
       if p is j' :: s then
        oapp
@@ -843,8 +836,7 @@ Proof.
     | dstate].
     suff wfrho : wfrun dSigma A (tnode a f) rho.
       by exists (FRun wfrho); rewrite /reaches_state fsfun_fun fpos_nil.
-    apply /wfrunP => p pinpos.
-    have /positions_tnode [-> | [j [s [eqpsj sinpos]]]] := pinpos.
+    apply /wfrunP => p /[dup] pinpos /positions_tnode [-> | [j [s [eqpsj sinpos]]]].
       rewrite arity_positions fsfun_fun fpos_nil /=.
       set qs := [tuple of _].
       suff -> : qs = tr.1.1 by rewrite -tra -trq -2!surjective_pairing.
@@ -856,7 +848,7 @@ Proof.
         by rewrite -positions_child positions_nil.
       rewrite insubT ?ltn_ord //= => ltik; rewrite ordinalE.
       set IHi := IH _ _ _.
-      by have /eqP -> := xchooseP IHi.
+      by apply/eqP/(xchooseP IHi).
     rewrite fsfun_fun in_fpos pinpos eqpsj.
     rewrite [X in (_, _, match X with [::] => _ | _ :: _ => _ end)]headI.
     rewrite last_headI belast_headI insubT => [/= | ltjk].
@@ -880,11 +872,10 @@ Proof.
       rewrite in_fpos -rcons_cons -positions_child.
       by apply: mem_child => //; apply: positions_tree_like.
     by rewrite last_rcons belast_rcons insubT /= ordinalE.
-  move: q; elim/tterm_nind: t => [a q [rn /eqP rnnilq] | a k f IH q].
-    apply /reach_eventuallyP.
+  elim/tterm_nind: t => [a | a k f IH] in q *;
+  case=>rn /eqP rnnilq; apply /reach_eventuallyP=>/=.
     have /wfrunP /= /(_ [::]) /(_ isT) := frun_wfrun rn.
     by rewrite arity0 tuple0 rnnilq.
-  move=> [rn /eqP rnnilq]; apply /reach_eventuallyP => /=.
   exists ([tuple of [seq rn i | i <- children_from_arity [::] k]], a, q).
   Opaque children_from_arity.
   rewrite /=; split=> //.
@@ -914,11 +905,11 @@ Lemma accepts_is_accepting (t : tterm r.+1 Sigma) :
     (exists (rn : frun dSigma dstate A t), is_accepting rn)
     (accepts A t).
 Proof.
-  apply: (iffP idP).
-    move=> /acceptsP [q [qinfinal /reaches_state_eventually [rn reachesrn]]].
+  apply (iffP (acceptsP _ t)).
+    case=>q [qinfinal /reaches_state_eventually [rn reachesrn]].
     by exists rn; apply /hasP; exists q.
-  move=> [rn /hasP [q qinfinal reachesrnq]].
-  apply /acceptsP; exists q; split=> //.
+  case=>rn /hasP [q qinfinal reachesrnq].
+  exists q; split=> //.
   by apply /reaches_state_eventually; exists rn.
 Qed.
 
@@ -937,16 +928,15 @@ Definition unambiguous (d : Sigma) (A : tbuta r.+1 Sigma state) : Prop :=
 Lemma unambiguous_deterministic (d : Sigma) (A : buta r.+1 Sigma state) :
   deterministic A -> unambiguous d A.
 Proof.
-  move=> /deterministicP deterA.
-  move=> t rho1 rho2 wf1 wf2 /=.
-  have {wf1 wf2} : wfrun d A t rho1 /\ wfrun d A t rho2 by split.
-  move: t; apply: child_ind => /=.
-    move=> t [wf1 wf2] l linpos lleaf.
+  move/deterministicP => deterA t rho1 rho2 wf1 wf2 /=.
+  move: (conj wf1 wf2)=>{wf1 wf2}.
+  move: t; apply: child_ind => /= t [wf1 wf2].
+    move=> l linpos lleaf.
     apply: deterA.
       by move: wf1 => /wfrunP /(_ l) /(_ linpos); apply.
     have := wf2 => /wfrunP /(_ l) /(_ linpos).
     by rewrite arity_leaf // children_from_arity0 (report_bug _ rho1); apply.
-  move=> t [wf1 wf2] p pinpos IH; apply: deterA.
+  move=> p pinpos IH; apply: deterA.
     by move: wf1 => /wfrunP /(_ p) /(_ pinpos); apply.
   have := wf2 => /wfrunP /(_ p) /(_ pinpos).
   set tup1 := [tuple of [seq rho1 _ | _ <- _]].
@@ -1001,10 +991,9 @@ Qed.
 Lemma restrict_self (state : finType) (A : tbuta r.+1 Sig state) :
   A = restrict A (ltnSn r.+1).
 Proof.
-  move: A => [fin tr]; rewrite /restrict /=.
+  case: A=> fin tr; rewrite /restrict /=.
   congr TBUTA; apply /ffunP => /= k; rewrite ffunE.
-  case: k => k ltkr2.
-  rewrite /widen_ord.
+  case: k => k ltkr2; rewrite /widen_ord.
   suff -> : (widen_ord_proof (Ordinal ltkr2) (ltnSn r.+1)) = ltkr2 by [].
   by apply: bool_irrelevance.
 Qed.
@@ -1027,9 +1016,9 @@ Lemma in_mergeable (k : nat) (trs1 : seq (k.-tuple st1 * Sig * st1))
     ].
 Proof.
   rewrite mem_filter; apply /andP /and3P.
-    move=> [/eqP -> /allpairsP /= [y]]; rewrite -(surjective_pairing y).
-    by move=> [+ + ->].
-  move=> [x1in x2in ->]; split=> //.
+    case=> /eqP -> /allpairsP /= [y]; rewrite -(surjective_pairing y).
+    by case=> + + ->.
+  case=> x1in x2in ->; split=> //.
   by apply /allpairsP => /=; exists x; rewrite -(surjective_pairing x).
 Qed.
 
@@ -1043,8 +1032,8 @@ Lemma mergeableP (k : nat) (trs1 : seq (k.-tuple st1 * Sig * st1))
     (x \in mergeable trs1 trs2).
 Proof.
   rewrite in_mergeable; apply (iffP and3P).
-    by move=> [-> -> /eqP ->].
-  by move=> [-> -> ->].
+    by case=> -> -> /eqP ->.
+  by case=> -> -> ->.
 Qed.
 
 Lemma mergeable_uniq (k : nat) (trs1 : seq (k.-tuple st1 * Sig * st1))
@@ -1078,8 +1067,8 @@ Lemma in_merge
 Proof.
   rewrite ffunE.
   apply /mapP /andP => /=.
-    move=> [x]; rewrite /mergeable mem_filter => /andP [/eqP eqSig].
-    move=> /allpairsP /= [y [y1 y2] eqxy] /=.
+    case=> x; rewrite /mergeable mem_filter => /andP [/eqP eqSig].
+    case/allpairsP => /= y [y1 y2] eqxy /=.
     move: eqSig; rewrite eqxy => /= eqSig.
     rewrite 2!pair_equal_spec => [[[-> ->] ->]] /=.
     have -> : [tuple of unzip1 (zip y.1.1.1 y.2.1.1)] = y.1.1.1.
@@ -1087,7 +1076,7 @@ Proof.
     have -> : [tuple of unzip2 (zip y.1.1.1 y.2.1.1)] = y.2.1.1.
       by apply /val_eqP => /=; rewrite unzip2_zip // 2!size_tuple.
     by rewrite {2}eqSig -!surjective_pairing.
-  move=> [tr1in1 tr2in2].
+  case=> tr1in1 tr2in2.
   exists (([tuple of unzip1 qs], a, q.1), ([tuple of unzip2 qs], a, q.2)).
     rewrite /mergeable mem_filter /= eqxx /=.
     apply /allpairsP => /=.
@@ -1107,9 +1096,8 @@ Proof.
   rewrite in_merge /=.
   have -> : [tuple of unzip1 (zip qs1 qs2)] = qs1.
     by apply /val_eqP => /=; rewrite unzip1_zip // 2!size_tuple.
-  have -> : [tuple of unzip2 (zip qs1 qs2)] = qs2.
-    by apply /val_eqP => /=; rewrite unzip2_zip // 2!size_tuple.
-  by [].
+  suff -> : [tuple of unzip2 (zip qs1 qs2)] = qs2 by [].
+  by apply /val_eqP => /=; rewrite unzip2_zip // 2!size_tuple.
 Qed.
 
 Lemma merge_uniq (A1 : buta r.+1 Sig st1) (A2 : buta r.+1 Sig st2)
@@ -1161,7 +1149,7 @@ Lemma intersection1_accepts (A1 : tbuta r.+1 Sig st1) (A2 : tbuta r.+1 Sig st2)
   accepts (intersection1 A1 A2) t = (accepts A1 t) && (accepts A2 t).
 Proof.
   apply /(accepts_is_accepting dSig (dst1, dst2)) /andP.
-    move=> [rni /is_acceptingP /= [qs /allpairsP [[q1 q2] /= [q1f q2f ->]]]].
+    case=> rni /is_acceptingP /= [qs /allpairsP [[q1 q2] /= [q1f q2f ->]]].
     rewrite /reaches_state => /eqP rnnil; split.
       apply /(accepts_is_accepting dSig dst1).
       pose rho1 := [fsfun p in fpos t => (rni p).1 | dst1].
@@ -1169,10 +1157,10 @@ Proof.
         exists (FRun wfrho1); apply /is_acceptingP; exists q1 => //.
         by rewrite /reaches_state fsfun_fun fpos_nil rnnil.
       apply /wfrunP => p pinpos.
-      move: (frun_wfrun rni) => /wfrunP /(_ p) /(_ pinpos).
+      move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun rni).
       rewrite in_merge => /andP [inA1 _]; move: inA1.
       rewrite fsfun_fun in_fpos pinpos.
-      congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+      congr in_mem; rewrite 2!pair_equal_spec; do!split.
       apply: eq_from_tnth => i.
       rewrite 3!tnth_map tnth_children_from_arity fsfun_fun in_fpos mem_child //.
       by rewrite positions_tree_like.
@@ -1183,17 +1171,15 @@ Proof.
       exists (FRun wfrho2); apply /is_acceptingP; exists q2 => //.
       by rewrite /reaches_state fsfun_fun fpos_nil rnnil.
     apply /wfrunP => p pinpos.
-    move: (frun_wfrun rni) => /wfrunP /(_ p) /(_ pinpos).
+    move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun rni).
     rewrite in_merge => /andP [_].
     rewrite fsfun_fun in_fpos pinpos.
-    congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+    congr in_mem; rewrite 2!pair_equal_spec; do!split.
     apply: eq_from_tnth => i.
     rewrite 3!tnth_map tnth_children_from_arity fsfun_fun in_fpos mem_child //.
     by rewrite positions_tree_like.
-  move=> [/(accepts_is_accepting dSig dst1) [rn1 /is_acceptingP [q1 q1f]]].
-  move=> /eqP rn1nil.
-  move=> /(accepts_is_accepting dSig dst2) [rn2 /is_acceptingP [q2 q2f]].
-  move=> /eqP rn2nil.
+  case=>/(accepts_is_accepting dSig dst1) [rn1 /is_acceptingP [q1 q1f]] /eqP rn1nil.
+  move=>/(accepts_is_accepting dSig dst2) [rn2 /is_acceptingP [q2 q2f]] /eqP rn2nil.
   pose rho := [fsfun p in fpos t => (rn1 p, rn2 p) | (dst1, dst2)].
   suff wfrho : wfrun dSig (intersection1 A1 A2) t rho.
     exists (FRun wfrho); apply /is_acceptingP; exists (q1, q2).
@@ -1202,13 +1188,13 @@ Proof.
   apply /wfrunP => p pinpos.
   Opaque children_from_arity.
   rewrite in_merge fsfun_fun in_fpos pinpos /=; apply /andP; split.
-    move: (frun_wfrun rn1) => /wfrunP /(_ p) /(_ pinpos).
-    congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+    move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun rn1).
+    congr in_mem; rewrite 2!pair_equal_spec; do!split.
     apply: eq_from_tnth => i.
     rewrite !tnth_map tnth_ord_tuple fsfun_fun in_fpos mem_child //.
     by apply: positions_tree_like.
-  move: (frun_wfrun rn2) => /wfrunP /(_ p) /(_ pinpos).
-  congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+  move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun rn2).
+  congr in_mem; rewrite 2!pair_equal_spec; do!split.
   apply: eq_from_tnth => i.
   rewrite !tnth_map tnth_ord_tuple fsfun_fun in_fpos mem_child //.
   by apply: positions_tree_like.
@@ -1220,7 +1206,7 @@ Lemma union1_accepts (A1 : tbuta r.+1 Sig st1) (A2 : tbuta r.+1 Sig st2)
   accepts (union1 A1 A2) t = (accepts A1 t) || (accepts A2 t).
 Proof.
   apply /(accepts_is_accepting dSig (dst1, dst2)) /orP.
-    move=> [rni /is_acceptingP /= [qs]].
+    case=> rni /is_acceptingP /= [qs].
     rewrite mem_cat => /orP [/allpairsP [[q1 q2] /= [q1f _ ->]] |].
       rewrite /reaches_state=> /eqP rnnil; left.
       (* TODO this is a lot of code repetition *)
@@ -1230,14 +1216,14 @@ Proof.
         exists (FRun wfrho1); apply /is_acceptingP; exists q1 => //.
         by rewrite /reaches_state fsfun_fun fpos_nil rnnil.
       apply /wfrunP => p pinpos.
-      move: (frun_wfrun rni) => /wfrunP /(_ p) /(_ pinpos).
+      move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun rni).
       rewrite in_merge => /andP [inA1 _]; move: inA1.
       rewrite fsfun_fun in_fpos pinpos.
-      congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+      congr in_mem; rewrite 2!pair_equal_spec; do!split.
       apply: eq_from_tnth => i.
       rewrite 3!tnth_map tnth_children_from_arity fsfun_fun in_fpos mem_child //.
       by rewrite positions_tree_like.
-    move=> /allpairsP [[q1 q2] /= [_ qf2 ->]].
+    case/allpairsP=>[[q1 q2]] /= [_ qf2 ->].
     rewrite /reaches_state=> /eqP rnnil; right.
     (* TODO this is a lot of code repetition *)
     apply /(accepts_is_accepting dSig dst2).
@@ -1246,15 +1232,15 @@ Proof.
       exists (FRun wfrho2); apply /is_acceptingP; exists q2 => //.
       by rewrite /reaches_state fsfun_fun fpos_nil rnnil.
     apply /wfrunP => p pinpos.
-    move: (frun_wfrun rni) => /wfrunP /(_ p) /(_ pinpos).
+    move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun rni).
     rewrite in_merge => /andP [_].
     rewrite fsfun_fun in_fpos pinpos.
-    congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+    congr in_mem; rewrite 2!pair_equal_spec; do!split.
     apply: eq_from_tnth => i.
     rewrite 3!tnth_map tnth_children_from_arity fsfun_fun in_fpos mem_child //.
     by rewrite positions_tree_like.
-  move=> [/(accepts_is_accepting dSig dst1) [rn1 /is_acceptingP [q1 q1f]] |].
-    move=> /eqP rn1nil.
+  case.
+    case/(accepts_is_accepting dSig dst1) => rn1 /is_acceptingP [q1 q1f] /eqP rn1nil.
     pose rho := [fsfun p in fpos t => (rn1 p, drn2 p) | (dst1, dst2)].
     suff wfrho : wfrun dSig (union1 A1 A2) t rho.
       exists (FRun wfrho); apply /is_acceptingP; exists (q1, drn2 [::]).
@@ -1264,18 +1250,17 @@ Proof.
     apply /wfrunP => p pinpos.
     Opaque children_from_arity.
     rewrite in_merge fsfun_fun in_fpos pinpos /=; apply /andP; split.
-      move: (frun_wfrun rn1) => /wfrunP /(_ p) /(_ pinpos).
-      congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+      move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun rn1).
+      congr in_mem; rewrite 2!pair_equal_spec; do!split.
       apply: eq_from_tnth => i.
       rewrite !tnth_map tnth_ord_tuple fsfun_fun in_fpos mem_child //.
       by apply: positions_tree_like.
-    move: (frun_wfrun drn2) => /wfrunP /(_ p) /(_ pinpos).
-    congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+    move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun drn2).
+    congr in_mem; rewrite 2!pair_equal_spec; do!split.
     apply: eq_from_tnth => i.
     rewrite !tnth_map tnth_ord_tuple fsfun_fun in_fpos mem_child //.
     by apply: positions_tree_like.
-  move=> /(accepts_is_accepting dSig dst2) [rn2 /is_acceptingP [q2 q2f]].
-  move=> /eqP rn2nil.
+  case/(accepts_is_accepting dSig dst2) => rn2 /is_acceptingP [q2 q2f] /eqP rn2nil.
   pose rho := [fsfun p in fpos t => (drn1 p, rn2 p) | (dst1, dst2)].
   suff wfrho : wfrun dSig (union1 A1 A2) t rho.
     exists (FRun wfrho); apply /is_acceptingP; exists (drn1 [::], q2).
@@ -1285,12 +1270,12 @@ Proof.
   apply /wfrunP => p pinpos.
   Opaque children_from_arity.
   rewrite in_merge fsfun_fun in_fpos pinpos /=; apply /andP; split.
-    move: (frun_wfrun drn1) => /wfrunP /(_ p) /(_ pinpos).
-    congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
+    move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun drn1).
+    congr in_mem; rewrite 2!pair_equal_spec; do!split.
     apply: eq_from_tnth => i.
     rewrite !tnth_map tnth_ord_tuple fsfun_fun in_fpos mem_child //.
     by apply: positions_tree_like.
-  move: (frun_wfrun rn2) => /wfrunP /(_ p) /(_ pinpos).
+  move/wfrunP/(_ p)/(_ pinpos): (frun_wfrun rn2).
   congr in_mem; rewrite 2!pair_equal_spec; split=> //; split=> //.
   apply: eq_from_tnth => i.
   rewrite !tnth_map tnth_ord_tuple fsfun_fun in_fpos mem_child //.
